@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>3D Glow Login / Signup — Heart Password Toggle</title>
+
+<style>
+/* ---------- base ---------- */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+:root{
+  --w: 360px; 
+  --h: 460px; 
+  --bg: #05010e;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:'Poppins',sans-serif;background:var(--bg);color:#fff;overflow:hidden}
+.stage{
+  position:relative;width:100%;height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  perspective:1400px;--mouseX:0;--mouseY:0;
+}
+
+/* particles canvas */
+canvas#particles{
+  position:fixed;inset:0;z-index:0;display:block;
+  background: radial-gradient(circle at 10% 10%, rgba(8,8,16,0.45), transparent 10%),
+              radial-gradient(circle at 90% 90%, rgba(8,2,20,0.35), transparent 10%);
+}
+
+/* glow outline */
+.glow-wrap{
+  position:relative;width:var(--w);height:var(--h);
+  display:flex;align-items:center;justify-content:center;
+  z-index:2;filter:drop-shadow(0 10px 30px rgba(0,200,255,0.06));
+}
+.glow-wrap::before{
+  content:'';position:absolute;inset:-14px;border-radius:22px;
+  background: conic-gradient(from 0deg,#00eaff,#ff2ab2,#8cff7e,#ffd500,#00eaff);
+  filter: blur(28px) saturate(1.2);animation: rotateAura 8s linear infinite;
+}
+.glow-wrap::after{
+  content:'';position:absolute;inset:-2px;border-radius:18px;
+  background: linear-gradient(90deg, rgba(0,234,255,0.6),rgba(255,42,178,0.6));
+  animation:pulse 3s ease-in-out infinite;mix-blend-mode:screen;
+}
+@keyframes rotateAura{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:.8}50%{opacity:.45}}
+
+/* cube */
+.cube{
+  width:var(--w);height:var(--h);position:relative;
+  transform-style:preserve-3d;
+  transition:transform 900ms cubic-bezier(.2,.8,.2,1);
+  border-radius:14px;z-index:1;transform-origin:center;
+}
+.face{
+  position:absolute;inset:0;padding:28px 26px;border-radius:12px;
+  background:rgba(255,255,255,0.03);
+  border:1px solid rgba(255,255,255,0.06);
+  box-shadow:0 6px 30px rgba(3,6,10,0.6);
+  display:flex;flex-direction:column;backface-visibility:hidden;
+}
+.face.login{transform:rotateY(0deg) translateZ(calc(var(--w)/2))}
+.face.signup{transform:rotateY(180deg) translateZ(calc(var(--w)/2))}
+
+h2{text-align:center;margin:6px 0 14px;font-weight:600;font-size:20px}
+.desc{text-align:center;font-size:12px;color:rgba(255,255,255,.7);margin-bottom:14px}
+
+.input-wrap{
+  width:100%;position:relative;margin:8px 0;
+}
+.input-wrap input{
+  width:100%;padding:12px 44px 12px 14px;
+  border-radius:10px;background:rgba(236, 231, 231, 0.885);
+  border:1px solid rgba(251, 247, 247, 0.84);color:white;
+}
+.input-wrap .eye{
+  position:absolute;right:10px;top:8px;font-size:24px;
+  cursor:pointer;user-select:none;
+  transition:0.25s;
+}
+.eye:hover{transform:scale(1.3)}
+
+/* controls */
+.controls{
+  margin-top:12px;display:flex;flex-direction:column;
+  align-items:center;position:relative;
+}
+.run-btn{
+  width:60%;min-width:160px;padding:12px 16px;
+  border-radius:999px;border:none;font-weight:700;
+  cursor:pointer;background:linear-gradient(90deg,#00eaff,#ff2ab2);
+  color:#021018;transition:.24s;position:relative;
+}
+.run-btn:active{transform:scale(.97)}
+
+.switch{margin-top:12px;color:#9eeaff;cursor:pointer;font-size:13px}
+
+/* decorative */
+.corner-deco{
+  position:absolute;inset:10px;border-radius:10px;
+  background:rgba(255,255,255,0.02);pointer-events:none;
+}
+
+/* responsive */
+@media (max-width:420px){
+  :root{--w:320px;--h:520px}
+  .run-btn{width:70%}
+}
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage">
+<canvas id="particles"></canvas>
+
+<div class="glow-wrap" id="glowWrap">
+<div class="cube" id="cube">
+
+<!-- ================= LOGIN FACE ================= -->
+<div class="face login">
+  <h2>Login</h2>
+  <div class="desc">Welcome back — please login</div>
+
+  <div class="input-wrap">
+    <input id="loginUser" placeholder="Username">
+  </div>
+
+  <div class="input-wrap">
+    <input id="loginPass" type="password" placeholder="Password">
+    <span class="eye" data-target="loginPass">💜</span>
+  </div>
+
+  <div class="controls" id="loginControls">
+    <button class="run-btn" id="loginBtn">Login</button>
+    <div class="switch" id="toSignup">Don't have an account? Signup</div>
+  </div>
+
+  <div class="corner-deco"></div>
+</div>
+
+<!-- ================= SIGNUP FACE ================= -->
+<div class="face signup">
+  <h2>Signup</h2>
+  <div class="desc">Create your account</div>
+
+  <div class="input-wrap">
+    <input id="signUser" placeholder="Username">
+  </div>
+
+  <div class="input-wrap">
+    <input id="signEmail" placeholder="Email" type="email">
+  </div>
+
+  <div class="input-wrap">
+    <input id="signPass" type="password" placeholder="Password">
+    <span class="eye" data-target="signPass">💜</span>
+  </div>
+
+  <div class="input-wrap">
+    <input id="signPass2" type="password" placeholder="Re-enter Password">
+    <span class="eye" data-target="signPass2">💜</span>
+  </div>
+
+  <div class="controls" id="signControls">
+    <button class="run-btn" id="signBtn">Signup</button>
+    <div class="switch" id="toLogin">Already have an account? Login</div>
+  </div>
+
+  <div class="corner-deco"></div>
+</div>
+
+</div>
+</div>
+</div>
+
+<script>
+/* ================= HEART PASSWORD TOGGLE ================= */
+document.querySelectorAll(".eye").forEach(icon=>{
+  icon.addEventListener("click", ()=>{
+    const input = document.getElementById(icon.dataset.target);
+
+    if(input.type === "password"){
+      input.type = "text";
+      icon.textContent = "💔"; // visible
+    } else {
+      input.type = "password";
+      icon.textContent = "💜"; // hidden
+    }
+  });
+});
+
+/* ================= Particles ================= */
+const canvas = particles, ctx=canvas.getContext("2d");
+let W=canvas.width=innerWidth, H=canvas.height=innerHeight;
+const particlesArr=[];
+function rand(a,b){return Math.random()*(b-a)+a}
+
+function initPart(){
+  particlesArr.length=0;
+  for(let i=0;i<60;i++){
+    particlesArr.push({
+      x:rand(0,W),y:rand(0,H),r:rand(.6,2),
+      vx:rand(-.2,.2),vy:rand(-.15,.15),
+      hue:rand(180,320)
+    });
+  }
+}
+initPart();
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  for(const p of particlesArr){
+    p.x+=p.vx; p.y+=p.vy;
+    if(p.x<0)p.x=W; if(p.x>W)p.x=0;
+    if(p.y<0)p.y=H; if(p.y>H)p.y=0;
+    const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*8);
+    g.addColorStop(0,`hsla(${p.hue},90%,70%,.15)`);
+    g.addColorStop(1,"transparent");
+    ctx.fillStyle=g;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r*6,0,7);ctx.fill();
+  }
+  requestAnimationFrame(draw);
+}
+draw();
+onresize=()=>{W=canvas.width=innerWidth;H=canvas.height=innerHeight;initPart()};
+
+/* ========== 3D cube rotation ========== */
+const cube=document.getElementById("cube");
+let rotated=false;
+document.getElementById("toSignup").onclick=()=>rotate(true);
+document.getElementById("toLogin").onclick=()=>rotate(false);
+
+function rotate(toBack){
+  rotated=toBack;
+  cube.style.transform = rotated ? "rotateY(180deg)" : "rotateY(0deg)";
+}
+
+/* ========== Runaway Button ========== */
+function needRun(type){
+  if(type==="login"){
+    return !loginUser.value.trim() || !loginPass.value.trim();
+  } else {
+    return !signUser.value.trim() ||
+           !signEmail.value.trim() ||
+           !signPass.value.trim() ||
+           !signPass2.value.trim() ||
+           signPass.value !== signPass2.value;
+  }
+}
+
+function attachRun(ctrl, btn, type){
+  ctrl.onmousemove=e=>{
+    if(!needRun(type))return btn.style.transform="";
+    const r=ctrl.getBoundingClientRect();
+    const bx=r.left+r.width/2, by=r.top+r.height/2;
+    const dx=e.clientX-bx, dy=e.clientY-by;
+    const dist=Math.hypot(dx,dy);
+    if(dist<120){
+      const mx = -dx/(dist||1)*80;
+      const my = -dy/(dist||1)*80;
+      btn.style.transform=`translate(${mx}px,${my}px)`;
+    }
+  };
+  ctrl.onmouseleave=()=>btn.style.transform="";
+}
+
+attachRun(loginControls, loginBtn, "login");
+attachRun(signControls, signBtn, "signup");
+
+</script>
+</body>
+</html>
