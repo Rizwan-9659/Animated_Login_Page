@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Lamp Pull Login / Registration (with real OTP)</title>
+<style>
+  /* basic styles (kept compact) */
+  :root{
+    --bg-dark:#0b0d11;
+    --bg-dim:#0f1720;
+    --panel:#0e1114;
+    --accent:#ffd866;
+    --glass: rgba(255,216,102,0.06);
+    --card-bg: rgba(255,255,255,0.02);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:#e6eef6}
+  body{background:linear-gradient(180deg,var(--bg-dark),#071018);display:flex;align-items:center;justify-content:center;padding:30px}
+  .card{width:960px;max-width:95vw;height:620px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.12));border-radius:14px;box-shadow:0 10px 30px rgba(2,6,23,0.7);display:flex;overflow:hidden;position:relative;}
+  .left{width:44%;min-width:320px;background:linear-gradient(180deg,#061021,#081226);position:relative;display:flex;align-items:flex-start;justify-content:center;padding-top:40px;overflow:hidden;}
+  .lamp-wrap{position:relative;width:200px;height:380px}
+  .lamp{width:120px;height:120px;border-radius:120px 120px 30px 30px/120px 120px 18px 18px;background:linear-gradient(180deg,#22292f,#15171a);position:absolute;left:calc(50% - 60px);top:54px;display:flex;align-items:flex-end;justify-content:center;overflow:visible;transform-origin:top center;transition: transform 300ms ease;}
+  .lamp::before{content:'';position:absolute;top:-18px;left:50%;transform:translateX(-50%);width:14px;height:28px;background:#29323a;border-radius:4px}
+  .bulb{width:48px;height:48px;border-radius:50%;background:radial-gradient(circle at 35% 25%, #fff7d0,#ffd866 30%,#ffb700 55%,#6b4b00 100%);box-shadow:0 0 40px rgba(255,200,90,0.0);opacity:0;transform:scale(0.6);transition:all 450ms cubic-bezier(.2,.9,.2,1);display:flex;align-items:center;justify-content:center;position:relative;z-index:3}
+  .on .bulb{opacity:1;transform:scale(1);box-shadow:0 0 80px rgba(255,210,120,0.55), inset 0 0 18px rgba(255,220,150,0.9)}
+  .on .lamp{transform:translateY(-6px)}
+  .light-cone{position:absolute;left:50%;transform:translateX(-50%);top:170px;width:420px;height:420px;border-radius:50%;pointer-events:none;mix-blend-mode:screen;opacity:0;transition:opacity 420ms ease-in-out, filter 420ms ease-in-out;filter:blur(40px);}
+  .on .light-cone{opacity:1;filter:blur(28px)}
+  .light-cone::after{content:'';position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 50% 10%, rgba(255,220,120,0.45) 0%, rgba(255,200,80,0.18) 20%, rgba(255,150,20,0.06) 40%, transparent 70%)}
+  .rope{position:absolute;left:50%;transform:translateX(-50%);top:6px;width:8px;height:220px;background:linear-gradient(180deg,#a67c3d,#6b3f18);border-radius:6px;box-shadow:inset 0 2px 0 rgba(255,255,255,0.06);display:flex;align-items:flex-end;justify-content:center;cursor:pointer;transition:transform 220ms ease;}
+  .pull{width:36px;height:36px;border-radius:50%;background:linear-gradient(180deg,#fff,#e4c27a);display:flex;align-items:center;justify-content:center;margin-bottom:6px;box-shadow:0 6px 18px rgba(0,0,0,0.4);position:relative}
+  .rope.pulled{transform:translateX(-50%) translateY(32px)}
+  .right{width:56%;padding:36px 40px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.06));display:flex;flex-direction:column;gap:12px;align-items:flex-start;justify-content:flex-start;position:relative;transition:opacity 320ms ease, filter 320ms ease;}
+  .card:not(.on) .right{opacity:0.06;filter:blur(2px);pointer-events:none}
+  h1{font-size:22px;margin:0 0 6px 0}
+  p.lead{margin:0 0 18px 0;color:#97a2b7}
+  .panel{width:100%;max-width:420px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.06));padding:18px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.45)}
+  .field{display:flex;flex-direction:column;margin-bottom:12px;position:relative}
+  label{font-size:12px;color:#c8d2e0;margin-bottom:6px}
+  input{padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.02);color:inherit;font-size:14px;width:100%}
+  .btn{display:inline-block;padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:600}
+  .btn-primary{background:linear-gradient(90deg,#ffcf66,#ffb54b);color:#08202a}
+  .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:#cfe2ff}
+  .switch-link{margin-top:8px;font-size:13px;color:#b8c8e6;cursor:pointer}
+  .footer-note{position:absolute;bottom:12px;left:40px;color:#6f829b;font-size:12px}
+  .input-eye{position:absolute;right:12px;top:36px;background:transparent;border:none;color:#dfe8ff;cursor:pointer;font-size:16px}
+  .otp-row{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .otp-input{width:140px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:inherit}
+  .small-note{font-size:13px;color:#b7c6dd;margin-top:6px}
+  @media (max-width:820px){.card{flex-direction:column;height:auto}.left{width:100%;min-width:unset;padding:26px 20px;height:320px}.right{width:100%;padding:28px 20px}.lamp-wrap{width:140px;height:300px}}
+</style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="left" aria-hidden="true">
+      <div class="lamp-wrap">
+        <div class="rope" id="rope" title="Pull the rope">
+          <div class="pull" id="pull">🔘</div>
+        </div>
+        <div class="lamp" id="lamp">
+          <div class="bulb" id="bulb"></div>
+        </div>
+        <div class="light-cone" id="cone" aria-hidden="true"></div>
+      </div>
+      <div class="footer-note">Click the rope to toggle light</div>
+    </div>
+
+    <div class="right">
+      <div style="display:flex;gap:12px;align-items:center;">
+        <div>
+          <h1>Welcome back</h1>
+          <p class="lead">Sign in to continue — the lamp controls page visibility.</p>
+        </div>
+      </div>
+
+      <div class="panel" id="forms">
+        <!-- LOGIN form -->
+        <form id="loginForm">
+          <div class="field">
+            <label for="loginEmail">Email</label>
+            <input id="loginEmail" type="email" placeholder="you@example.com" required />
+          </div>
+
+          <div class="field" style="margin-bottom:6px">
+            <label for="loginPassword">Password</label>
+            <input id="loginPassword" type="password" placeholder="••••••••" required />
+            <button type="button" class="input-eye" id="toggleLoginPwd" title="Show/Hide">👁</button>
+          </div>
+
+          <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
+            <button type="submit" class="btn btn-primary">Login</button>
+            <button type="button" id="showRegister" class="btn btn-ghost">Create account</button>
+          </div>
+          <p class="small-note" id="loginMsg"></p>
+        </form>
+
+        <!-- REGISTER form -->
+        <form id="registerForm" style="display:none">
+          <div class="field">
+            <label for="rname">Full name</label>
+            <input id="rname" type="text" placeholder="Your name" required />
+          </div>
+          <div class="field">
+            <label for="remail">Email</label>
+            <input id="remail" type="email" placeholder="you@example.com" required />
+          </div>
+
+          <div class="field" style="margin-bottom:6px">
+            <label for="rpassword">Password</label>
+            <input id="rpassword" type="password" placeholder="Choose a password" required />
+            <button type="button" class="input-eye" id="toggleRegPwd" title="Show/Hide">👁</button>
+          </div>
+
+          <div class="field" style="margin-bottom:6px">
+            <label for="rcpassword">Re-enter Password</label>
+            <input id="rcpassword" type="password" placeholder="Confirm password" required />
+            <button type="button" class="input-eye" id="toggleRegCPwd" title="Show/Hide">👁</button>
+          </div>
+
+          <!-- OTP area (hidden until register step 1 returns ok) -->
+          <div id="otpArea" style="display:none">
+            <div class="field">
+              <label for="otpInput">Enter OTP</label>
+              <div class="otp-row">
+                <input id="otpInput" class="otp-input" type="text" maxlength="6" placeholder="6-digit code" />
+                <button id="verifyOtpBtn" class="btn btn-primary" type="button">Verify</button>
+              </div>
+              <p class="small-note">We sent a verification code to your email. It is valid for 10 minutes.</p>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
+            <button type="submit" id="registerBtn" class="btn btn-primary">Register</button>
+            <button type="button" id="showLogin" class="btn btn-ghost">Back to login</button>
+          </div>
+
+          <p class="small-note" id="regMsg"></p>
+        </form>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* --------------------------
+  Lamp + rope minimal logic
+---------------------------*/
+const card = document.getElementById('card');
+const rope = document.getElementById('rope');
+const pull = document.getElementById('pull');
+let isOn = false;
+
+function setLight(on){
+  isOn = !!on;
+  if(isOn){
+    card.classList.add('on'); pull.textContent='💡';
+  } else {
+    card.classList.remove('on'); pull.textContent='🔘';
+  }
+}
+rope.addEventListener('click', ()=>{
+  rope.classList.add('pulled');
+  setTimeout(()=> setLight(!isOn), 180);
+});
+setLight(false);
+
+/* --------------------------
+  Form toggles + show/hide pwd
+---------------------------*/
+const loginForm = document.getElementById('loginForm');
+const registerForm = document.getElementById('registerForm');
+document.getElementById('showRegister').addEventListener('click', ()=>{
+  loginForm.style.display='none'; registerForm.style.display='block';
+});
+document.getElementById('showLogin').addEventListener('click', ()=>{
+  registerForm.style.display='none'; loginForm.style.display='block';
+});
+
+// toggle password buttons
+function togglePwd(btnId, inputId){
+  const btn = document.getElementById(btnId);
+  const inp = document.getElementById(inputId);
+  btn.addEventListener('click', ()=> {
+    if(inp.type === 'password'){ inp.type='text'; btn.textContent='🙈'; }
+    else { inp.type='password'; btn.textContent='👁'; }
+  });
+}
+togglePwd('toggleLoginPwd','loginPassword');
+togglePwd('toggleRegPwd','rpassword');
+togglePwd('toggleRegCPwd','rcpassword');
+
+/* --------------------------
+  API endpoints configuration
+---------------------------*/
+const API_BASE = ''; // same origin; if backend is at different URL, put full origin e.g. 'http://localhost:3000'
+
+/* --------------------------
+  LOGIN (demo) - calls /api/login
+---------------------------*/
+const loginMsg = document.getElementById('loginMsg');
+loginForm.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  loginMsg.textContent = '';
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  try {
+    const res = await fetch(API_BASE + '/api/login', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ email, password })
+    });
+    const json = await res.json();
+    if(!res.ok) throw new Error(json.error || 'Login failed');
+    loginMsg.style.color = 'lightgreen';
+    loginMsg.textContent = json.message || 'Logged in';
+    // TODO: redirect to dashboard or set cookie/JWT
+  } catch (err){
+    loginMsg.style.color = '#ff9b9b';
+    loginMsg.textContent = err.message;
+  }
+});
+
+/* --------------------------
+  REGISTRATION + OTP FLOW
+  Step 1: Submit name/email/password -> /api/register
+  Server sends OTP and returns token (id).
+  Step 2: Show OTP input; user enters OTP -> /api/verify-otp
+---------------------------*/
+let pendingId = null;
+const regMsg = document.getElementById('regMsg');
+const registerBtn = document.getElementById('registerBtn');
+const otpArea = document.getElementById('otpArea');
+const verifyOtpBtn = document.getElementById('verifyOtpBtn');
+
+document.getElementById('registerForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  regMsg.textContent = '';
+  // basic client-side validation
+  const name = document.getElementById('rname').value.trim();
+  const email = document.getElementById('remail').value.trim();
+  const password = document.getElementById('rpassword').value;
+  const confirm = document.getElementById('rcpassword').value;
+  if(!name || !email || !password || !confirm){ regMsg.style.color='#ff9b9b'; regMsg.textContent='Please fill all fields'; return; }
+  if(password !== confirm){ regMsg.style.color='#ff9b9b'; regMsg.textContent='Passwords do not match'; return; }
+
+  // send to backend to generate OTP and email
+  registerBtn.disabled = true;
+  registerBtn.textContent = 'Sending OTP...';
+  try {
+    const res = await fetch(API_BASE + '/api/register', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name, email, password })
+    });
+    const json = await res.json();
+    if(!res.ok) throw new Error(json.error || 'Registration failed');
+    // success - server returns { id }
+    pendingId = json.id;
+    regMsg.style.color='lightgreen';
+    regMsg.textContent = 'OTP sent to your email. Enter it below.';
+    otpArea.style.display='block';
+    // optionally hide password inputs
+    document.getElementById('rpassword').disabled = true;
+    document.getElementById('rcpassword').disabled = true;
+  } catch (err){
+    regMsg.style.color='#ff9b9b';
+    regMsg.textContent = err.message;
+  } finally {
+    registerBtn.disabled = false;
+    registerBtn.textContent = 'Register';
+  }
+});
+
+// verify OTP
+verifyOtpBtn.addEventListener('click', async ()=>{
+  const otp = document.getElementById('otpInput').value.trim();
+  if(!otp || !pendingId){ regMsg.style.color='#ff9b9b'; regMsg.textContent='Enter OTP'; return; }
+  verifyOtpBtn.disabled = true; verifyOtpBtn.textContent = 'Verifying...';
+  try {
+    const res = await fetch(API_BASE + '/api/verify-otp', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ id: pendingId, otp })
+    });
+    const json = await res.json();
+    if(!res.ok) throw new Error(json.error || 'OTP verification failed');
+    regMsg.style.color='lightgreen';
+    regMsg.textContent = 'Registration complete. You can now login.';
+    // reset form & UI
+    document.getElementById('registerForm').reset();
+    document.getElementById('rpassword').disabled = false;
+    document.getElementById('rcpassword').disabled = false;
+    otpArea.style.display = 'none';
+    pendingId = null;
+    // switch to login after a short delay
+    setTimeout(()=>{ registerForm.style.display='none'; loginForm.style.display='block'; regMsg.textContent=''; }, 1400);
+  } catch (err){
+    regMsg.style.color='#ff9b9b';
+    regMsg.textContent = err.message;
+  } finally {
+    verifyOtpBtn.disabled = false; verifyOtpBtn.textContent = 'Verify';
+  }
+});
+</script>
+</body>
+</html>
