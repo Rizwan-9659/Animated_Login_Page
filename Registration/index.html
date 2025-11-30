@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>3D Login / Signup — Neon + Particles + Dark Mode</title>
+<style>
+  :root{
+    --bg: #0b1020;
+    --panel: rgba(255,255,255,0.04);
+    --text: #e6f0ff;
+    --muted: #a8b3c7;
+    --accent: #7c3aed; /* purple neon */
+    --accent-2: #06b6d4; /* cyan neon */
+    --glass: rgba(255,255,255,0.06);
+    --success: #10b981;
+  }
+
+  :root[data-theme="light"]{
+    --bg: linear-gradient(180deg,#f6f8fb,#e6eefb);
+    --panel: rgba(0,0,0,0.06);
+    --text: #0b1a2b;
+    --muted: #4b5870;
+    --glass: rgba(0,0,0,0.04);
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background: var(--bg);
+    color:var(--text);
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    overflow:hidden;
+  }
+
+  /* particles canvas fills background */
+  #particles {
+    position:fixed; inset:0; z-index:0;
+    display:block; width:100%; height:100%;
+  }
+
+  /* top-right controls */
+  .controls{
+    position:fixed; right:22px; top:14px; z-index:30;
+    display:flex; gap:10px; align-items:center;
+  }
+  .toggleTheme{
+    background:transparent; border:1px solid rgba(255,255,255,0.08);
+    padding:8px 12px; border-radius:10px; color:var(--text);
+    cursor:pointer; backdrop-filter: blur(6px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.35), inset 0 0 30px rgba(255,255,255,0.02);
+  }
+
+  /* center stage */
+  .stage{
+    position:relative; z-index:10;
+    height:100vh; display:flex; justify-content:center; align-items:center;
+    perspective:1400px;
+    padding:20px;
+  }
+
+  /* initial single button */
+  #openBtn{
+    padding:16px 28px; border-radius:14px; border:none;
+    font-size:18px; cursor:pointer; color:white;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    box-shadow: 0 12px 40px rgba(124,58,237,0.18), 0 2px 6px rgba(6,182,212,0.06);
+    z-index:12;
+  }
+  #openBtn:hover{ transform:translateY(-3px); transition:transform .18s ease; }
+
+  /* cube container */
+  .cube-wrap{ width:420px; height:480px; position:relative; display:none; }
+  .cube{
+    width:100%; height:100%;
+    position:relative; transform-style: preserve-3d;
+    transition: transform 0.9s cubic-bezier(.2,.9,.3,1);
+  }
+
+  /* faces */
+  .face{
+    position:absolute; inset:0; border-radius:18px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    box-shadow: 0 8px 40px rgba(2,6,23,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+    padding:28px; display:flex; flex-direction:column; align-items:center;
+    gap:10px; backface-visibility:hidden; overflow:hidden;
+    border:1px solid var(--glass);
+    backdrop-filter: blur(8px);
+  }
+
+  .face h1{ margin:6px 0 12px 0; font-size:22px; letter-spacing:0.2px; color:var(--text) }
+  .face p{ margin:0; color:var(--muted); font-size:13px }
+
+  /* front face (login) */
+  .front{ transform: translateZ(30px); }
+  /* back face (signup) */
+  .back{ transform: rotateY(180deg) translateZ(30px); }
+
+  /* small decorative neon lines */
+  .neon-line{
+    position:absolute; height:2px; width:120%; left:-10%;
+    top:12px; background: linear-gradient(90deg, rgba(124,58,237,0.65), rgba(6,182,212,0.65));
+    filter: blur(14px); opacity:0.35; transform:translateZ(1px);
+  }
+
+  /* form */
+  .fields{ width:100%; display:flex; flex-direction:column; gap:10px; margin-top:6px; align-items:center }
+  input[type="text"], input[type="email"], input[type="password"]{
+    width:92%; padding:12px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.06);
+    background:transparent; color:var(--text); outline:none;
+    box-shadow: 0 6px 18px rgba(2,6,23,0.45), inset 0 1px 0 rgba(255,255,255,0.01);
+    font-size:14px;
+  }
+  input::placeholder{ color:var(--muted) }
+
+  /* neon buttons */
+  .neon-btn{
+    width:94%; padding:12px; border-radius:12px; font-weight:600; font-size:16px;
+    border:none; cursor:pointer; position:relative; overflow:visible;
+    background: linear-gradient(90deg, rgba(124,58,237,0.95), rgba(6,182,212,0.95));
+    color:white; letter-spacing:0.3px;
+    box-shadow: 0 8px 30px rgba(124,58,237,0.14), 0 0 40px rgba(6,182,212,0.06), 0 0 20px rgba(124,58,237,0.18);
+    transition: transform .15s ease, box-shadow .15s ease;
+    transform-origin:center;
+  }
+  .neon-btn:hover{ transform: translateY(-3px) scale(1.01) }
+  .neon-btn:active{ transform: translateY(0) scale(.995) }
+
+  /* disabled appearance */
+  .neon-btn.disabled{
+    filter: grayscale(.2) contrast(.9) opacity(.55); cursor:not-allowed;
+    box-shadow: none; transform:none;
+  }
+
+  /* toggle links */
+  .link{
+    color: var(--accent-2); text-decoration:underline; cursor:pointer; font-size:13px;
+    margin-top:6px;
+  }
+
+  /* small helper row */
+  .row{ width:95%; display:flex; justify-content:space-between; align-items:center; margin-top:6px; }
+
+  /* dancing/shake animation (applied temporarily) */
+  @keyframes shakeX {
+    0% { transform: translateX(0) }
+    20% { transform: translateX(-10px) }
+    40% { transform: translateX(10px) }
+    60% { transform: translateX(-6px) }
+    80% { transform: translateX(6px) }
+    100% { transform: translateX(0) }
+  }
+  .shake {
+    animation: shakeX .45s ease;
+  }
+
+  /* success overlay */
+  .toast{
+    position:fixed; z-index:50; left:50%; transform:translateX(-50%); bottom:24px;
+    background:linear-gradient(90deg, rgba(16,185,129,0.95), rgba(34,197,94,0.95));
+    color:white; padding:12px 20px; border-radius:12px; box-shadow:0 12px 40px rgba(16,185,129,0.12);
+    display:none;
+  }
+
+  /* small footer */
+  .small{ font-size:12px; color:var(--muted); margin-top:2px }
+
+  /* responsive */
+  @media (max-width:540px){
+    .cube-wrap{ width:90vw; height:520px }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+
+<div class="controls">
+  <button id="themeBtn" class="toggleTheme" title="Toggle dark/light">Toggle Theme</button>
+</div>
+
+<div class="stage">
+  <button id="openBtn">Login</button>
+
+  <div class="cube-wrap" id="cubeWrap" aria-hidden="true">
+    <div class="cube" id="cube">
+      <!-- Front: Login -->
+      <div class="face front" id="loginFace" role="region" aria-label="Login form">
+        <div class="neon-line"></div>
+        <h1>Welcome Back</h1>
+        <p>Sign in to continue to the app</p>
+
+        <div class="fields">
+          <input id="loginEmail" type="email" placeholder="Email" autocomplete="username">
+          <input id="loginPass" type="password" placeholder="Password" autocomplete="current-password">
+          <button id="loginBtn" class="neon-btn disabled" aria-disabled="true">Login</button>
+
+          <div class="row">
+            <div class="small">Don't have an account?</div>
+            <div class="link" id="toSignup">Create one</div>
+          </div>
+
+          <div class="small"></div>
+        </div>
+      </div>
+
+      <!-- Back: Signup -->
+      <div class="face back" id="signupFace" role="region" aria-label="Signup form">
+        <div class="neon-line"></div>
+        <h1>Create Account</h1>
+        <p>Join — quick and free</p>
+
+        <div class="fields">
+          <input id="signupName" type="text" placeholder="Full name" autocomplete="name">
+          <input id="signupEmail" type="email" placeholder="Email" autocomplete="email">
+          <input id="signupPass" type="password" placeholder="Password">
+          <button id="signupBtn" class="neon-btn disabled" aria-disabled="true">Sign Up</button>
+
+          <div class="row">
+            <div class="small">Already registered?</div>
+            <div class="link" id="toLogin">Login</div>
+          </div>
+
+          <div class="small"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Message</div>
+
+<script>
+/* ---------------------------
+   Particle background
+   --------------------------- */
+(function(){ 
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+  let width = canvas.width = innerWidth;
+  let height = canvas.height = innerHeight;
+  const opts = {
+    particleCount: Math.floor((width * height) / 42000),
+    maxVel: 0.6,
+    colors: ['rgba(124,58,237,0.9)','rgba(6,182,212,0.9)','rgba(255,255,255,0.06)'],
+    rMin: 0.6, rMax: 2.4
+  };
+  let particles = [];
+
+  function rand(min,max){ return Math.random()*(max-min)+min }
+
+  function initParticles(){
+    particles = [];
+    for(let i=0;i<opts.particleCount;i++){
+      particles.push({
+        x: Math.random()*width,
+        y: Math.random()*height,
+        vx: rand(-opts.maxVel, opts.maxVel),
+        vy: rand(-opts.maxVel, opts.maxVel),
+        r: rand(opts.rMin, opts.rMax),
+        c: opts.colors[Math.floor(Math.random()*opts.colors.length)]
+      });
+    }
+  }
+
+  function step(){
+    ctx.clearRect(0,0,width,height);
+    for(let p of particles){
+      p.x += p.vx;
+      p.y += p.vy;
+      if(p.x<0||p.x>width) p.vx *= -1;
+      if(p.y<0||p.y>height) p.vy *= -1;
+
+      // draw glow
+      ctx.beginPath();
+      ctx.fillStyle = p.c;
+      ctx.globalAlpha = 0.9;
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fill();
+      ctx.closePath();
+
+      // faint line connections
+      for(let q of particles){
+        let dx = p.x - q.x, dy = p.y - q.y;
+        let d = Math.sqrt(dx*dx+dy*dy);
+        if(d < 90){
+          ctx.beginPath();
+          ctx.strokeStyle = 'rgba(255,255,255,' + (0.015 * (90-d)) + ')';
+          ctx.lineWidth = 0.6;
+          ctx.moveTo(p.x,p.y);
+          ctx.lineTo(q.x,q.y);
+          ctx.stroke();
+          ctx.closePath();
+        }
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  function resize(){
+    width = canvas.width = innerWidth;
+    height = canvas.height = innerHeight;
+    initParticles();
+  }
+
+  window.addEventListener('resize', resize);
+  initParticles();
+  requestAnimationFrame(step);
+})();
+
+/* ---------------------------
+   Theme persistence (dark/light)
+   --------------------------- */
+(function(){
+  const themeBtn = document.getElementById('themeBtn');
+  const root = document.documentElement;
+
+  function applyTheme(theme){
+    if(theme === 'light') root.setAttribute('data-theme','light');
+    else root.removeAttribute('data-theme');
+    localStorage.setItem('theme', theme);
+  }
+
+  // init
+  const saved = localStorage.getItem('theme') || 'dark';
+  applyTheme(saved);
+
+  themeBtn.addEventListener('click', ()=>{
+    const current = localStorage.getItem('theme') || 'dark';
+    applyTheme(current==='dark' ? 'light' : 'dark');
+  });
+})();
+
+/* ---------------------------
+   Cube rotation & UI logic
+   --------------------------- */
+(function(){
+  const openBtn = document.getElementById('openBtn');
+  const cubeWrap = document.getElementById('cubeWrap');
+  const cube = document.getElementById('cube');
+  const toSignup = document.getElementById('toSignup');
+  const toLogin = document.getElementById('toLogin');
+  const toast = document.getElementById('toast');
+
+  // Inputs & buttons
+  const loginEmail = document.getElementById('loginEmail');
+  const loginPass = document.getElementById('loginPass');
+  const loginBtn = document.getElementById('loginBtn');
+
+  const sName = document.getElementById('signupName');
+  const sEmail = document.getElementById('signupEmail');
+  const sPass = document.getElementById('signupPass');
+  const signupBtn = document.getElementById('signupBtn');
+
+  // Show cube with entry animation
+  openBtn.addEventListener('click', ()=>{
+    openBtn.style.display='none';
+    cubeWrap.style.display='block';
+    cubeWrap.animate([{ transform:'translateY(10px) scale(.98)'},{ transform:'translateY(0) scale(1)'}], { duration:600, easing:'cubic-bezier(.2,.9,.3,1)'});
+    cubeWrap.setAttribute('aria-hidden','false');
+  });
+
+  // rotateY(180deg) to show back
+  function showSignup(){
+    cube.style.transform = 'rotateY(180deg) translateZ(0)';
+  }
+  function showLogin(){
+    cube.style.transform = 'rotateY(0deg)';
+  }
+  toSignup.addEventListener('click', ()=> showSignup());
+  toLogin.addEventListener('click', ()=> showLogin());
+
+  // helper toast
+  function showToast(msg, ok=true){
+    toast.textContent = msg;
+    toast.style.display = 'block';
+    toast.style.background = ok ? 'linear-gradient(90deg,#10b981,#22c55e)' : 'linear-gradient(90deg,#ef4444,#f97316)';
+    setTimeout(()=> toast.style.display='none', 2400);
+  }
+
+  /* ---------------------------
+     Validation helpers + localStorage users
+     --------------------------- */
+  function getUsers(){
+    try{
+      return JSON.parse(localStorage.getItem('users')||'[]');
+    }catch(e){ return [] }
+  }
+  function saveUser(user){
+    const arr = getUsers();
+    arr.push(user);
+    localStorage.setItem('users', JSON.stringify(arr));
+  }
+
+  // enable/disable buttons based on filled inputs
+  function tuneLoginBtn(){
+    const ok = loginEmail.value.trim() && loginPass.value.trim();
+    if(ok){ loginBtn.classList.remove('disabled'); loginBtn.removeAttribute('aria-disabled') } 
+    else { loginBtn.classList.add('disabled'); loginBtn.setAttribute('aria-disabled','true') }
+  }
+  function tuneSignupBtn(){
+    const ok = sName.value.trim() && sEmail.value.trim() && sPass.value.trim();
+    if(ok){ signupBtn.classList.remove('disabled'); signupBtn.removeAttribute('aria-disabled') } 
+    else { signupBtn.classList.add('disabled'); signupBtn.setAttribute('aria-disabled','true') }
+  }
+
+  // wire input events
+  [loginEmail, loginPass].forEach(i=> i.addEventListener('input', tuneLoginBtn));
+  [sName, sEmail, sPass].forEach(i=> i.addEventListener('input', tuneSignupBtn));
+
+  // shake helper
+  function shakeEl(el){
+    el.classList.remove('shake');
+    void el.offsetWidth; // reflow to restart
+    el.classList.add('shake');
+  }
+
+  // signup logic — store sanitized user (lowercase email)
+  signupBtn.addEventListener('click', (e)=>{
+    const name = sName.value.trim();
+    const email = sEmail.value.trim().toLowerCase();
+    const pass = sPass.value.trim();
+    if(!name || !email || !pass){
+      shakeEl(signupBtn);
+      return;
+    }
+    // check duplicate
+    const users = getUsers();
+    if(users.some(u=> u.email === email)){
+      showToast('Email already registered', false);
+      shakeEl(signupBtn);
+      return;
+    }
+    saveUser({ name, email, pass });
+    showToast('Signup successful ✔');
+    // clear and go to login
+    sName.value=''; sEmail.value=''; sPass.value='';
+    tuneSignupBtn();
+    showLogin();
+  });
+
+  // login logic
+  loginBtn.addEventListener('click', ()=>{
+    const email = loginEmail.value.trim().toLowerCase();
+    const pass = loginPass.value.trim();
+    if(!email || !pass){
+      shakeEl(loginBtn);
+      return;
+    }
+    const user = getUsers().find(u => u.email === email && u.pass === pass);
+    if(user){
+      showToast('Login successful ✔');
+      // subtle success animation: scale cube + fade out
+      cube.animate([{ transform: getComputedStyle(cube).transform }, { transform: 'translateY(-30px) scale(.98)', opacity:0 }], { duration:700, easing:'cubic-bezier(.2,.9,.3,1)' });
+      setTimeout(()=>{
+        // show some success UI (basic)
+        document.body.innerHTML = `
+          <div style="height:100vh;display:flex;align-items:center;justify-content:center;background:${getComputedStyle(document.body).background};">
+            <div style="text-align:center;color:var(--text);">
+              <h1 style="font-size:28px;margin-bottom:10px;">Welcome, ${user.name}</h1>
+              <p style="color:var(--muted);margin-bottom:18px;">You are now logged in (demo)</p>
+              <button id="logout" style="padding:10px 16px;border-radius:10px;border:none;background:linear-gradient(90deg,#7c3aed,#06b6d4);color:white;cursor:pointer;">Logout</button>
+            </div>
+          </div>
+        `;
+        document.getElementById('logout').addEventListener('click', ()=> location.reload());
+      },750);
+    } else {
+      showToast('Invalid email or password', false);
+      shakeEl(loginBtn);
+    }
+  });
+
+  // initial tune
+  tuneLoginBtn(); tuneSignupBtn();
+
+  // keyboard: Enter key triggers if enabled
+  [loginEmail, loginPass].forEach(inp=> inp.addEventListener('keydown', (ev)=> {
+    if(ev.key === 'Enter' && !loginBtn.classList.contains('disabled')) loginBtn.click();
+  }));
+  [sName, sEmail, sPass].forEach(inp=> inp.addEventListener('keydown', (ev)=> {
+    if(ev.key === 'Enter' && !signupBtn.classList.contains('disabled')) signupBtn.click();
+  }));
+
+})();
+</script>
+
+</body>
+</html>
