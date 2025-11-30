@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Login Signup Form</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="cube" id="cubeBox">
+
+        <!-- LOGIN SIDE -->
+        <div class="side login-side">
+            <h2>Login</h2>
+
+            <input type="text" id="loginUser" placeholder="Username">
+
+            <div class="input-box">
+                <input type="password" id="loginPass" placeholder="Password" class="pwd">
+                <span class="monkey-eye" onclick="togglePassword('loginPass', this)">🙈</span>
+            </div>
+
+            <button id="loginBtn" class="run-btn"
+                onmouseover="attemptRun('login')"
+                onclick="submitForm('login')">
+                Login
+            </button>
+
+            <p class="switch" onclick="rotateCube()">Don't have an account? Signup</p>
+        </div>
+
+        <!-- SIGNUP SIDE -->
+        <div class="side signup-side">
+            <h2>Signup</h2>
+
+            <input type="text" id="signUser" placeholder="Username">
+            <input type="email" id="signEmail" placeholder="Email">
+
+            <div class="input-box">
+                <input type="password" id="signPass" placeholder="Password" class="pwd">
+                <span class="monkey-eye" onclick="togglePassword('signPass', this)">🙈</span>
+            </div>
+
+            <div class="input-box">
+                <input type="password" id="signPass2" placeholder="Re-enter Password" class="pwd">
+                <span class="monkey-eye" onclick="togglePassword('signPass2', this)">🙈</span>
+            </div>
+
+            <button id="signBtn" class="run-btn"
+                onmouseover="attemptRun('signup')"
+                onclick="submitForm('signup')">
+                Signup
+            </button>
+
+            <p class="switch" onclick="rotateCube()">Already have an account? Login</p>
+        </div>
+
+    </div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
